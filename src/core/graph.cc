@@ -152,18 +152,21 @@ namespace infini
         // TODO：利用 allocator 给计算图分配内存
         // HINT: 获取分配好的内存指针后，可以调用 tensor 的 setDataBlob 函数给 tensor 绑定内存
         // =================================== 作业 ===================================
-        for (auto tensor : tensors)
+        std::vector<size_t> offsets;
+        // Add all the tensors to the allocator
+        for (const auto &tensor : tensors)
         {
-            size_t bytes = tensor->getBytes();
-
-            size_t offset = allocator.alloc(bytes);
-            // 将偏移量转换为实际指针：基地址 + 偏移量
-            void *ptr = static_cast<char *>(allocator.getPtr()) + offset;
-            Runtime runtime = tensor->getRuntime();
-
-            Blob blob = make_ref<BlobObj>(runtime, ptr);
-            tensor->setDataBlob(blob);
+            offsets.push_back(allocator.alloc(tensor->getBytes()));
         }
+
+        const auto base = reinterpret_cast<char *>(allocator.getPtr());
+
+        for (size_t i = 0; i < tensors.size(); ++i)
+        {
+            auto tensor = tensors[i];
+            tensor->setDataBlob(make_ref<BlobObj>(runtime, base + offsets[i]));
+        }
+        
         allocator.info();
     }
 
