@@ -1,69 +1,91 @@
 #include "utils/operator_utils.h"
 #include "core/runtime.h"
 
-namespace infini {
+namespace infini
+{
 
-Shape infer_broadcast(const Shape &A, const Shape &B) {
+    Shape infer_broadcast(const Shape &A, const Shape &B)
+    {
 
-    // =================================== 作业 ===================================
-    // TODO：对 A 和 B 进行双向广播，返回广播后的形状。
-    // REF: https://github.com/onnx/onnx/blob/main/docs/Broadcasting.md
-    // =================================== 作业 ===================================
-    
-    return {};
-}
-
-int get_real_axis(const int &axis, const int &rank) {
-    IT_ASSERT(rank >= 1);
-    IT_ASSERT(axis >= -rank && axis <= (rank - 1));
-    int newAxis;
-    if (axis < 0) {
-        newAxis = rank + axis;
-    } else {
-        newAxis = axis;
+        // =================================== 作业 ===================================
+        // TODO：对 A 和 B 进行双向广播，返回广播后的形状。
+        // REF: https://github.com/onnx/onnx/blob/main/docs/Broadcasting.md
+        // =================================== 作业 ===================================
+        size_t result_dims = std::max(A.size(), B.size());
+        Shape result;
+        for (size_t i = 0; i < result_dims; ++i)
+        {
+            size_t idx_a = A.size() - result_dims + i;
+            size_t idx_b = B.size() - result_dims + i;
+            size_t dim_a = (idx_a >= 0 && idx_a < A.size()) ? A[idx_a] : 1;
+            size_t dim_b = (idx_b >= 0 && idx_b < B.size()) ? B[idx_b] : 1;
+            result.push_back(std::max(dim_a,dim_b));
+        }
+        return result;
     }
-    return newAxis;
-}
 
-Shape locate_index(size_t inputN, const Shape &shape) {
-    Shape ans(shape.size());
-    auto i = ans.rbegin();
-    auto j = shape.rbegin(), ej = shape.rend();
-    while (j != ej) {
-        auto div = std::div(inputN, *j++);
-        *i++ = div.rem;
-        inputN = div.quot;
+    int get_real_axis(const int &axis, const int &rank)
+    {
+        IT_ASSERT(rank >= 1);
+        IT_ASSERT(axis >= -rank && axis <= (rank - 1));
+        int newAxis;
+        if (axis < 0)
+        {
+            newAxis = rank + axis;
+        }
+        else
+        {
+            newAxis = axis;
+        }
+        return newAxis;
     }
-    return ans;
-}
 
-size_t delocate_index(const Shape &shapeIndex, const Shape &shape,
-                      const Shape &stride) {
-    size_t ans = 0;
-    Shape index(shapeIndex.size());
-    IT_ASSERT(shapeIndex.size() == shape.size());
-    IT_ASSERT(shape.size() == stride.size());
-    for (size_t i = 0; i < shape.size(); ++i) {
-        index[i] = shapeIndex[i] % shape[i];
-        ans += index[i] * stride[i];
+    Shape locate_index(size_t inputN, const Shape &shape)
+    {
+        Shape ans(shape.size());
+        auto i = ans.rbegin();
+        auto j = shape.rbegin(), ej = shape.rend();
+        while (j != ej)
+        {
+            auto div = std::div(inputN, *j++);
+            *i++ = div.rem;
+            inputN = div.quot;
+        }
+        return ans;
     }
-    return ans;
-}
 
-std::string device_to_str(Device device) {
-    std::string deviceStr;
-    switch (device) {
-    case Device::CPU:
-        return "CPU";
-    default:
-        IT_TODO_HALT();
+    size_t delocate_index(const Shape &shapeIndex, const Shape &shape,
+                          const Shape &stride)
+    {
+        size_t ans = 0;
+        Shape index(shapeIndex.size());
+        IT_ASSERT(shapeIndex.size() == shape.size());
+        IT_ASSERT(shape.size() == stride.size());
+        for (size_t i = 0; i < shape.size(); ++i)
+        {
+            index[i] = shapeIndex[i] % shape[i];
+            ans += index[i] * stride[i];
+        }
+        return ans;
     }
-}
 
-std::string get_kernel_attrs_str(const KernelAttrs &kernelAttrs) {
-    std::string deviceStr = device_to_str(std::get<0>(kernelAttrs));
-    std::string opStr = OpType(std::get<1>(kernelAttrs)).toString();
-    return deviceStr + ", " + opStr;
-}
+    std::string device_to_str(Device device)
+    {
+        std::string deviceStr;
+        switch (device)
+        {
+        case Device::CPU:
+            return "CPU";
+        default:
+            IT_TODO_HALT();
+        }
+    }
+
+    std::string get_kernel_attrs_str(const KernelAttrs &kernelAttrs)
+    {
+        std::string deviceStr = device_to_str(std::get<0>(kernelAttrs));
+        std::string opStr = OpType(std::get<1>(kernelAttrs)).toString();
+        return deviceStr + ", " + opStr;
+    }
 
 } // namespace infini
